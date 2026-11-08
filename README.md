@@ -61,6 +61,9 @@ Instale as dependências:
 ```bash
 npm install
 ```
+
+**Atenção:** Antes de rodar o Prisma, renomeie o arquivo .env.example (que está na pasta backend) para .env. Se preferir, crie um arquivo .env manualmente e cole a linha DATABASE_URL="file:./dev.db"
+
 Crie o banco de dados e as tabelas (Prisma):
 ```bash
 npx prisma migrate dev
