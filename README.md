@@ -1,5 +1,4 @@
 
-```markdown
 # 🎓 Sistema de Gestão Universitária - PWA Mobile-First
 
 Projeto Integrador (SENAC) - **2ª Entrega: Prova de Conceito (PoC)**.
@@ -102,5 +101,4 @@ npm run dev
 *   Lucas Taveira Fonseca
 ```
 
----
 
