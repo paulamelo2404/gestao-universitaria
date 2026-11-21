@@ -21,25 +21,27 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 
 ## ✅ O que já foi feito (Status Atual)
 
-*   **Estrutura do Monorepo:** Pastas `frontend`, `backend` e `shared` configuradas.
-*   **Frontend:** Tela de Login responsiva e funcional criada com React e Tailwind.
-*   **Backend:** Servidor Express rodando com CORS configurado.
-*   **Banco de Dados:** Modelagem completa (Aluno, Disciplina, Aula, Nota, Aviso) e banco populado com dados de teste (Persona João da Silva).
-*   **API:** Rotas de teste para buscar Aluno por matrícula, Próxima Aula, Notas e Avisos.
+* **Estrutura do Monorepo:** Pastas `frontend`, `backend` e `shared` configuradas.
+* **Frontend:** Tela de Login responsiva e conectada à API.
+* **Dashboard:** Painel do aluno desenvolvido, com informações acadêmicas e card da próxima aula.
+* **Atalhos de acesso rápido:** Implementados acessos ao Boletim e aos Avisos.
+* **Navegação:** Integração entre Login, Dashboard, Boletim e Avisos.
+* **Boletim:** Tela implementada para consulta de notas e frequência.
+* **Avisos:** Tela implementada para exibição de comunicados acadêmicos.
+* **Backend:** Servidor Express com CORS configurado.
+* **Banco de Dados:** Modelagem das entidades Aluno, Disciplina, Aula, Nota e Aviso.
+* **API:** Rotas implementadas para buscar aluno por matrícula, próxima aula, notas e avisos.
+
 
 ---
 
 ## 🚧 O que falta fazer (Próximos Passos)
 
-- [ ] Conectar a tela de Login do React com a API (fazer o João logar de verdade).
-- [ ] Criar a tela do Dashboard (Painel do Aluno com o card da próxima aula).
-- [ ] Criar a tela de Boletim (Notas e Frequência).
-- [ ] Criar a tela de Avisos.
-- [ ] Criar a navegação inferior (Bottom Nav).
+- [ ] Implementar a navegação inferior (Bottom Nav), caso faça parte dos requisitos do projeto.
+- [ ] Validar o funcionamento integrado.
 - [ ] Escrever o documento final da 2ª entrega.
 - [ ] Gravar o vídeo de 1 minuto de demonstração.
-
----
+**Observação:** A validação completa da execução integrada do sistema ainda está pendente.
 
 ## 💻 Como rodar o projeto na sua máquina
 
