@@ -43,8 +43,6 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 - [ ] Gravar o vídeo de 1 minuto de demonstração.
 
 
-**Observação:** A validação completa da execução integrada do sistema ainda está pendente.
-
 ## 💻 Como rodar o projeto na sua máquina
 
 **Pré-requisitos:** Ter o [Node.js](https://nodejs.org/) instalado na máquina.
