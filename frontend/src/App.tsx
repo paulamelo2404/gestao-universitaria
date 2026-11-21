@@ -247,15 +247,23 @@ function App() {
     );
   }
 
-  // Tela do Dashboard.
+    // Tela do Dashboard.
   if (tela === 'dashboard' && aluno) {
     return (
-      <Dashboard
-        aluno={aluno}
-        proximaAula={proximaAula}
-        onAbrirBoletim={handleAbrirBoletim}
-        onAbrirAvisos={handleAbrirAvisos}
-      />
+      <>
+        {erroTela && (
+          <p className="p-4 text-center text-red-600">
+            {erroTela}
+          </p>
+        )}
+
+        <Dashboard
+          aluno={aluno}
+          proximaAula={proximaAula}
+          onAbrirBoletim={handleAbrirBoletim}
+          onAbrirAvisos={handleAbrirAvisos}
+        />
+      </>
     );
   }
 
