@@ -41,6 +41,8 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 - [ ] Validar o funcionamento integrado.
 - [ ] Escrever o documento final da 2ª entrega.
 - [ ] Gravar o vídeo de 1 minuto de demonstração.
+
+
 **Observação:** A validação completa da execução integrada do sistema ainda está pendente.
 
 ## 💻 Como rodar o projeto na sua máquina
