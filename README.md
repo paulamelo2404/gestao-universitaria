@@ -31,13 +31,10 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 * **Backend:** Servidor Express com CORS configurado.
 * **Banco de Dados:** Modelagem das entidades Aluno, Disciplina, Aula, Nota e Aviso.
 * **API:** Rotas implementadas para buscar aluno por matrícula, próxima aula, notas e avisos.
-
-
+* **Implementar a navegação inferior (Bottom Nav):* ** caso faça parte dos requisitos do projeto.
 ---
 
 ## 🚧 O que falta fazer (Próximos Passos)
-
-- [ ] Implementar a navegação inferior (Bottom Nav), caso faça parte dos requisitos do projeto.
 - [ ] Validar o funcionamento integrado.
 - [ ] Escrever o documento final da 2ª entrega.
 - [ ] Gravar o vídeo de 1 minuto de demonstração.
