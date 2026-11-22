@@ -1,379 +1,333 @@
-
 import { useEffect, useState, type FormEvent } from 'react';
-import Dashboard from './Dashboard';
 
-interface Aluno {
+import { API_URL, Icone, lerAluno } from './lib/sgu';
+import Aulas from './pages/Aulas';
+import Avisos from './pages/Avisos';
+import Boletim from './pages/Boletim';
+import Disciplinas from './pages/Disciplinas';
+import Inicio from './pages/Inicio';
+import Perfil from './pages/Perfil';
+
+type Tema = 'light' | 'dark';
+
+type AlunoLogin = {
   id: number;
   nome: string;
-  curso: string;
-  semestre: number;
+  matricula: string;
+  email?: string;
+  curso?: string;
+  semestre?: number;
+};
+
+const MATRICULA_TESTE = '202410001';
+
+function lerTema(): Tema {
+  try {
+    const tema = localStorage.getItem('sgu-theme');
+    if (tema === 'dark' || tema === 'light') return tema;
+  } catch {
+    // O tema do sistema é usado quando o armazenamento não está disponível.
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
-interface Aula {
-  dataHora: string;
-  sala?: string | null;
-  disciplina?: {
-    nome: string;
-  } | null;
+function aplicarTema(tema: Tema) {
+  document.documentElement.classList.toggle('dark', tema === 'dark');
+  document.documentElement.dataset.theme = tema;
 }
 
-interface Nota {
-  id: number;
-  avaliacao: string;
-  valor: number;
-  frequencia: number;
-  disciplina: {
-    nome: string;
-  };
+function validarAluno(dados: unknown): dados is AlunoLogin {
+  return (
+    typeof dados === 'object' &&
+    dados !== null &&
+    'id' in dados &&
+    typeof dados.id === 'number' &&
+    'nome' in dados &&
+    typeof dados.nome === 'string' &&
+    'matricula' in dados &&
+    typeof dados.matricula === 'string'
+  );
 }
 
-interface Aviso {
-  id: number;
-  titulo: string;
-  mensagem: string;
-  createdAt: string;
-}
-
-type Tela = 'login' | 'dashboard' | 'boletim' | 'avisos';
-
-function App() {
+function Login() {
   const [matricula, setMatricula] = useState('');
   const [erro, setErro] = useState('');
-  const [erroTela, setErroTela] = useState('');
+  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const [carregandoTela, setCarregandoTela] = useState(false);
+  const [tema, setTema] = useState<Tema>(lerTema);
+  const claro = tema === 'light';
 
-  const [aluno, setAluno] = useState<Aluno | null>(null);
-  const [tela, setTela] = useState<Tela>('login');
-
-  const [proximaAula, setProximaAula] = useState<Aula | null>(null);
-  const [notas, setNotas] = useState<Nota[]>([]);
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
-
-  // Busca a próxima aula quando o Dashboard é aberto.
   useEffect(() => {
-    if (tela !== 'dashboard') return;
+    aplicarTema(tema);
+    try {
+      localStorage.setItem('sgu-theme', tema);
+    } catch {
+      // O tema continua aplicado nesta sessão.
+    }
+  }, [tema]);
 
-    const buscarProximaAula = async () => {
-      try {
-        const response = await fetch(
-          'http://localhost:3333/api/aulas/proxima'
-        );
+  async function handleLogin(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    const matriculaLimpa = matricula.trim();
 
-        if (!response.ok) {
-          throw new Error('Não foi possível buscar a próxima aula.');
-        }
+    if (!matriculaLimpa) {
+      setErro('Informe sua matrícula para continuar.');
+      return;
+    }
 
-        const dados = await response.json();
-        setProximaAula(dados);
-      } catch {
-        setProximaAula(null);
-      }
-    };
-
-    buscarProximaAula();
-  }, [tela]);
-
-  // Mantém o login original e abre o Dashboard após o acesso.
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-
-    setErro('');
     setCarregando(true);
+    setErro('');
 
     try {
-      const response = await fetch(
-        `http://localhost:3333/api/alunos/${matricula}`
+      const resposta = await fetch(
+        `${API_URL}/api/alunos/${encodeURIComponent(matriculaLimpa)}`
       );
+      const dados: unknown = await resposta.json().catch(() => null);
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.erro || 'Matrícula não encontrada');
+      if (!resposta.ok) {
+        const detalhe =
+          typeof dados === 'object' &&
+          dados !== null &&
+          'erro' in dados &&
+          typeof dados.erro === 'string'
+            ? dados.erro
+            : 'Não foi possível realizar o acesso.';
+        throw new Error(
+          resposta.status === 404 ? 'Matrícula não encontrada.' : detalhe
+        );
       }
 
-      const dados = await response.json();
-
-      const alunoLogado: Aluno = {
-        id: dados.id,
-        nome: dados.nome,
-        curso: dados.curso,
-        semestre: dados.semestre
-      };
+      if (!validarAluno(dados)) {
+        throw new Error('O servidor retornou dados inválidos para o aluno.');
+      }
 
       localStorage.setItem('aluno', JSON.stringify(dados));
-
-      setAluno(alunoLogado);
-      setTela('dashboard');
-    } catch (err) {
+      window.location.hash = '#inicio';
+    } catch (error) {
       setErro(
-        err instanceof Error
-          ? err.message
-          : 'Erro ao conectar com o servidor'
+        error instanceof TypeError
+          ? 'Não foi possível conectar ao servidor.'
+          : error instanceof Error
+            ? error.message
+            : 'Erro inesperado ao entrar.'
       );
     } finally {
       setCarregando(false);
     }
-  };
-
-  // Abre o Boletim e busca as notas do aluno.
-  const handleAbrirBoletim = async () => {
-    if (!aluno) return;
-
-    setCarregandoTela(true);
-    setErroTela('');
-
-    try {
-      const response = await fetch(
-        `http://localhost:3333/api/notas/${aluno.id}`
-      );
-
-      if (!response.ok) {
-        throw new Error('Não foi possível buscar suas notas.');
-      }
-
-      const dados = await response.json();
-      setNotas(dados);
-      setTela('boletim');
-    } catch (err) {
-      setErroTela(
-        err instanceof Error ? err.message : 'Erro ao buscar notas.'
-      );
-    } finally {
-      setCarregandoTela(false);
-    }
-  };
-
-  // Abre Avisos e busca os comunicados do aluno.
-  const handleAbrirAvisos = async () => {
-    if (!aluno) return;
-
-    setCarregandoTela(true);
-    setErroTela('');
-
-    try {
-      const response = await fetch(
-        `http://localhost:3333/api/avisos/${aluno.id}`
-      );
-
-      if (!response.ok) {
-        throw new Error('Não foi possível buscar os avisos.');
-      }
-
-      const dados = await response.json();
-      setAvisos(dados);
-      setTela('avisos');
-    } catch (err) {
-      setErroTela(
-        err instanceof Error ? err.message : 'Erro ao buscar avisos.'
-      );
-    } finally {
-      setCarregandoTela(false);
-    }
-  };
-
-  // Volta para o Dashboard sem precisar fazer login novamente.
-  const voltarDashboard = () => {
-    setErroTela('');
-    setTela('dashboard');
-  };
-
-  // Exibe o carregamento enquanto busca notas ou avisos.
-  if (carregandoTela) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <p className="text-gray-600">Carregando informações...</p>
-      </main>
-    );
   }
 
-  // Tela de login.
-  if (tela === 'login') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-8">
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-emerald-700">JS</span>
-            </div>
+  return (
+    <div
+      className={`min-h-screen ${
+        claro ? 'bg-[#E3E6DE]' : 'bg-[#0A1410]'
+      }`}
+    >
+      <main
+        className={`relative mx-auto flex min-h-screen w-full max-w-[390px] items-center justify-center px-5 py-10 ${
+          claro ? 'bg-[#F6F7F2]' : 'bg-[#0F1A15]'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setTema(claro ? 'dark' : 'light')}
+          aria-label="Alternar tema"
+          className={`absolute right-5 top-4 grid h-[42px] w-[42px] place-items-center rounded-full ${
+            claro
+              ? 'bg-[#E2EDDC] text-[#14402F]'
+              : 'bg-[#24402F] text-[#E6F0EA]'
+          }`}
+        >
+          <Icone nome={claro ? 'moon' : 'sun'} />
+        </button>
 
-            <h1 className="text-2xl font-bold text-gray-900">
-              Bem-vindo de volta
-            </h1>
-
-            <p className="text-gray-500 mt-2">
-              Acesse sua conta para continuar
-            </p>
+        <section className="w-full max-w-[350px] pt-8">
+        <div
+          className={`rounded-[30px] px-6 py-[30px] text-center shadow-[0_10px_30px_rgba(20,64,47,.12)] ${
+            claro ? 'bg-white' : 'bg-[#1A2A23]'
+          }`}
+        >
+          <div
+            className={`mx-auto mb-[18px] grid h-[62px] w-[62px] place-items-center rounded-full ${
+              claro
+                ? 'bg-[#E2EDDC] text-[#14402F]'
+                : 'bg-[#24402F] text-[#E6F0EA]'
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="30"
+              height="30"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 9l10-5 10 5-10 5z" />
+              <path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
+            </svg>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <h1
+            className={`text-[26px] font-bold leading-tight ${
+              claro ? 'text-[#17382B]' : 'text-[#E6F0EA]'
+            }`}
+          >
+            Bem-vindo de volta
+          </h1>
+          <p
+            className={`mb-0 mt-1.5 text-sm ${
+              claro ? 'text-[#5E6F66]' : 'text-[#93A89C]'
+            }`}
+          >
+            Acesse sua conta para continuar
+          </p>
+
+          <form
+            onSubmit={handleLogin}
+            className="mt-[26px] space-y-4 text-left"
+            noValidate
+          >
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="matricula"
+                className={`mb-2 block text-sm font-semibold ${
+                  claro ? 'text-[#17382B]' : 'text-[#E6F0EA]'
+                }`}
+              >
                 Matrícula
               </label>
-
               <input
+                id="matricula"
                 type="text"
+                inputMode="numeric"
+                autoComplete="off"
                 value={matricula}
-                onChange={(e) => setMatricula(e.target.value)}
+                onChange={(evento) => {
+                  setMatricula(evento.target.value);
+                  if (erro) setErro('');
+                  if (mensagemRecuperacao) setMensagemRecuperacao('');
+                }}
                 placeholder="Ex: 202410001"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"
-                required
                 disabled={carregando}
+                aria-invalid={Boolean(erro)}
+                aria-describedby={erro ? 'erro-login' : undefined}
+                className={`w-full rounded-[14px] border-[1.5px] p-4 text-base outline-none focus:border-[#6F9468] focus:ring-4 focus:ring-[#6F9468]/30 disabled:opacity-60 ${
+                  claro
+                    ? 'border-[#E3E6DE] bg-[#F6F7F2] text-[#17382B] placeholder:text-[#8A978F]'
+                    : 'border-[#2A3B33] bg-[#0F1A15] text-[#E6F0EA] placeholder:text-[#7F948A]'
+                }`}
               />
+              {erro && (
+                <p
+                  id="erro-login"
+                  role="alert"
+                  className={`mt-2 text-sm ${
+                    claro ? 'text-[#B3382C]' : 'text-[#F08A7E]'
+                  }`}
+                >
+                  {erro}
+                </p>
+              )}
             </div>
-
-            {erro && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                {erro}
-              </p>
-            )}
 
             <button
               type="submit"
-              disabled={carregando}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-semibold py-3 rounded-xl transition-colors"
+              disabled={carregando || !matricula.trim()}
+              className="w-full rounded-2xl bg-[#F2A57D] py-4 font-bold text-[#3B1D0E] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {carregando ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <a href="#" className="text-sm text-emerald-600 hover:underline">
-              Esqueceu a matricula?
-            </a>
+          <button
+            type="button"
+            onClick={() => {
+              setErro('');
+              setMensagemRecuperacao(
+                'Procure a secretaria acadêmica para recuperar sua matrícula.'
+              );
+            }}
+            className={`mt-5 text-sm underline ${
+              claro ? 'text-[#14402F]' : 'text-[#7FB083]'
+            }`}
+          >
+            Esqueceu a matrícula?
+          </button>
+          {mensagemRecuperacao && (
+            <p
+              role="status"
+              className={`mt-2 text-sm ${
+                claro ? 'text-[#5E6F66]' : 'text-[#93A89C]'
+              }`}
+            >
+              {mensagemRecuperacao}
+            </p>
+          )}
+
+          <div
+            className={`mt-5 border-t pt-4 text-center ${
+              claro ? 'border-[#E3E6DE]' : 'border-[#2A3B33]'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMatricula(MATRICULA_TESTE);
+                setErro('');
+              }}
+              disabled={carregando}
+              className={`text-sm underline ${
+                claro ? 'text-[#14402F]' : 'text-[#7FB083]'
+              }`}
+            >
+              Preencher com a matrícula de teste
+            </button>
           </div>
         </div>
-      </div>
-    );
-  }
-
-    // Tela do Dashboard.
-  if (tela === 'dashboard' && aluno) {
-    return (
-      <>
-        {erroTela && (
-          <p className="p-4 text-center text-red-600">
-            {erroTela}
-          </p>
-        )}
-
-        <Dashboard
-          aluno={aluno}
-          proximaAula={proximaAula}
-          onAbrirBoletim={handleAbrirBoletim}
-          onAbrirAvisos={handleAbrirAvisos}
-        />
-      </>
-    );
-  }
-
-  // Tela do Boletim.
-  if (tela === 'boletim') {
-    return (
-      <main className="min-h-screen bg-gray-50 p-6">
-        <div className="mx-auto max-w-6xl">
-          <button
-            onClick={voltarDashboard}
-            className="mb-6 text-emerald-700 font-medium hover:underline"
-          >
-            ← Voltar ao Dashboard
-          </button>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Meu Boletim
-          </h1>
-
-          {erroTela && (
-            <p className="mb-4 text-red-600">{erroTela}</p>
-          )}
-
-          {notas.length > 0 ? (
-            <div className="grid gap-4">
-              {notas.map((nota) => (
-                <div
-                  key={nota.id}
-                  className="rounded-xl border border-gray-200 bg-white p-5"
-                >
-                  <h2 className="font-semibold text-gray-900">
-                    {nota.disciplina.nome}
-                  </h2>
-
-                  <p className="mt-2 text-gray-600">
-                    Avaliação: {nota.avaliacao}
-                  </p>
-
-                  <p className="mt-1 text-gray-600">
-                    Nota: {nota.valor}
-                  </p>
-
-                  <p className="mt-1 text-gray-600">
-                    Frequência: {nota.frequencia}%
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">
-              Nenhuma nota disponível no momento.
-            </p>
-          )}
-        </div>
+        </section>
       </main>
-    );
-  }
-
-  // Tela de Avisos.
-  if (tela === 'avisos') {
-    return (
-      <main className="min-h-screen bg-gray-50 p-6">
-        <div className="mx-auto max-w-6xl">
-          <button
-            onClick={voltarDashboard}
-            className="mb-6 text-emerald-700 font-medium hover:underline"
-          >
-            ← Voltar ao Dashboard
-          </button>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Avisos acadêmicos
-          </h1>
-
-          {erroTela && (
-            <p className="mb-4 text-red-600">{erroTela}</p>
-          )}
-
-          {avisos.length > 0 ? (
-            <div className="grid gap-4">
-              {avisos.map((aviso) => (
-                <div
-                  key={aviso.id}
-                  className="rounded-xl border border-gray-200 bg-white p-5"
-                >
-                  <h2 className="font-semibold text-gray-900">
-                    {aviso.titulo}
-                  </h2>
-
-                  <p className="mt-2 text-gray-600">
-                    {aviso.mensagem}
-                  </p>
-
-                  <p className="mt-3 text-sm text-gray-400">
-                    {new Date(aviso.createdAt).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">
-              Nenhum aviso disponível no momento.
-            </p>
-          )}
-        </div>
-      </main>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
 
-export default App;
+function lerRota() {
+  return window.location.hash.replace('#', '') || 'login';
+}
+
+export default function App() {
+  const [rota, setRota] = useState(lerRota);
+
+  useEffect(() => {
+    const atualizarRota = () => setRota(lerRota());
+    window.addEventListener('hashchange', atualizarRota);
+    aplicarTema(lerTema());
+
+    return () => window.removeEventListener('hashchange', atualizarRota);
+  }, []);
+
+  if (rota !== 'login' && !lerAluno()) return <Login />;
+
+  switch (rota) {
+    case 'inicio':
+      return <Inicio />;
+    case 'aula':
+      return <Aulas />;
+    case 'disciplinas':
+      return <Disciplinas />;
+    case 'boletim':
+      return <Boletim />;
+    case 'avisos':
+      return <Avisos />;
+    case 'perfil':
+      return <Perfil />;
+    case 'login':
+      return <Login />;
+    default:
+      return <Inicio />;
+  }
+}
