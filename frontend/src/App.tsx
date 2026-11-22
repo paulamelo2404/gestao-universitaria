@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
+import { API_URL, Icone, lerAluno } from './lib/sgu';
 import Aulas from './pages/Aulas';
-import Boletim from './pages/Boletim';
 import Avisos from './pages/Avisos';
+import Boletim from './pages/Boletim';
 import Disciplinas from './pages/Disciplinas';
 import Inicio from './pages/Inicio';
 import Perfil from './pages/Perfil';
 
-type Aluno = {
+type Tema = 'light' | 'dark';
+
+type AlunoLogin = {
   id: number;
   nome: string;
   matricula: string;
@@ -17,81 +19,58 @@ type Aluno = {
   semestre?: number;
 };
 
-type Tema = 'light' | 'dark';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
 const MATRICULA_TESTE = '202410001';
 
-/* Mesma chave e mesmos valores das outras telas, para o tema acompanhar o aluno. */
-const lerTema = (): Tema => {
-  const salvo = localStorage.getItem('sgu-theme');
-
-  if (salvo === 'dark' || salvo === 'light') {
-    return salvo;
+function lerTema(): Tema {
+  try {
+    const tema = localStorage.getItem('sgu-theme');
+    if (tema === 'dark' || tema === 'light') return tema;
+  } catch {
+    // O tema do sistema é usado quando o armazenamento não está disponível.
   }
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'light';
-};
+}
 
-/* As telas internas usam o variant dark: do Tailwind, que lê a classe "dark" no <html>. */
-const aplicarTema = (t: Tema) => {
-  document.documentElement.classList.toggle('dark', t === 'dark');
-  document.documentElement.dataset.theme = t;
-};
+function aplicarTema(tema: Tema) {
+  document.documentElement.classList.toggle('dark', tema === 'dark');
+  document.documentElement.dataset.theme = tema;
+}
 
-const lerRota = () => window.location.hash.replace('#', '') || 'login';
-
-const temAlunoSalvo = () => Boolean(localStorage.getItem('aluno'));
-
-/* Cores por tema. As classes ficam escritas por extenso para o Tailwind encontrá-las. */
-const paletas = {
-  claro: {
-    fundo: 'bg-[#F6F7F2]',
-    card: 'bg-white',
-    titulo: 'text-[#17382B]',
-    texto: 'text-[#5E6F66]',
-    campo:
-      'bg-[#F6F7F2] border-[#E3E6DE] text-[#17382B] placeholder:text-[#8A978F]',
-    suave: 'bg-[#E2EDDC] text-[#14402F]',
-    link: 'text-[#14402F]',
-    divisor: 'border-[#E3E6DE]',
-    erro: 'text-[#B3382C]',
-  },
-  escuro: {
-    fundo: 'bg-[#17231D]',
-    card: 'bg-[#24352B]',
-    titulo: 'text-[#E6F0EA]',
-    texto: 'text-[#A9BDB1]',
-    campo:
-      'bg-[#17231D] border-[#344F3C] text-[#E6F0EA] placeholder:text-[#7F948A]',
-    suave: 'bg-[#344F3C] text-[#E2EDDC]',
-    link: 'text-[#9CC7A5]',
-    divisor: 'border-[#344F3C]',
-    erro: 'text-[#F08A7E]',
-  },
-} as const;
+function validarAluno(dados: unknown): dados is AlunoLogin {
+  return (
+    typeof dados === 'object' &&
+    dados !== null &&
+    'id' in dados &&
+    typeof dados.id === 'number' &&
+    'nome' in dados &&
+    typeof dados.nome === 'string' &&
+    'matricula' in dados &&
+    typeof dados.matricula === 'string'
+  );
+}
 
 function Login() {
   const [matricula, setMatricula] = useState('');
   const [erro, setErro] = useState('');
+  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [tema, setTema] = useState<Tema>(lerTema);
+  const claro = tema === 'light';
 
-  const temaClaro = tema === 'light';
-  const p = temaClaro ? paletas.claro : paletas.escuro;
+  useEffect(() => {
+    aplicarTema(tema);
+    try {
+      localStorage.setItem('sgu-theme', tema);
+    } catch {
+      // O tema continua aplicado nesta sessão.
+    }
+  }, [tema]);
 
-  const alternarTema = () => {
-    const novoTema: Tema = temaClaro ? 'dark' : 'light';
-    setTema(novoTema);
-    localStorage.setItem('sgu-theme', novoTema);
-    aplicarTema(novoTema);
-  };
-
-  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  async function handleLogin(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
     const matriculaLimpa = matricula.trim();
 
     if (!matriculaLimpa) {
@@ -99,88 +78,83 @@ function Login() {
       return;
     }
 
-    setErro('');
     setCarregando(true);
+    setErro('');
 
     try {
-      const response = await fetch(
+      const resposta = await fetch(
         `${API_URL}/api/alunos/${encodeURIComponent(matriculaLimpa)}`
       );
+      const dados: unknown = await resposta.json().catch(() => null);
 
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('Matrícula não encontrada.');
-        }
-
-        throw new Error(data?.erro || 'Não foi possível realizar o acesso.');
+      if (!resposta.ok) {
+        const detalhe =
+          typeof dados === 'object' &&
+          dados !== null &&
+          'erro' in dados &&
+          typeof dados.erro === 'string'
+            ? dados.erro
+            : 'Não foi possível realizar o acesso.';
+        throw new Error(
+          resposta.status === 404 ? 'Matrícula não encontrada.' : detalhe
+        );
       }
 
-      const aluno = data as Aluno;
+      if (!validarAluno(dados)) {
+        throw new Error('O servidor retornou dados inválidos para o aluno.');
+      }
 
-      localStorage.setItem('aluno', JSON.stringify(aluno));
-
+      localStorage.setItem('aluno', JSON.stringify(dados));
       window.location.hash = '#inicio';
-    } catch (err) {
-      if (err instanceof TypeError) {
-        setErro('Não foi possível conectar ao servidor.');
-      } else {
-        setErro(err instanceof Error ? err.message : 'Erro inesperado.');
-      }
+    } catch (error) {
+      setErro(
+        error instanceof TypeError
+          ? 'Não foi possível conectar ao servidor.'
+          : error instanceof Error
+            ? error.message
+            : 'Erro inesperado ao entrar.'
+      );
     } finally {
       setCarregando(false);
     }
-  };
+  }
 
   return (
-    <main
-      className={`min-h-screen flex items-center justify-center px-5 py-10 ${p.fundo}`}
+    <div
+      className={`min-h-screen ${
+        claro ? 'bg-[#E3E6DE]' : 'bg-[#0A1410]'
+      }`}
     >
-      <section className="w-full max-w-md">
-        <div className={`rounded-[30px] p-8 shadow-lg ${p.card}`}>
-          <div className="flex justify-end mb-2">
-            <button
-              type="button"
-              onClick={alternarTema}
-              aria-label="Alternar tema"
-              className={`w-[42px] h-[42px] flex items-center justify-center rounded-full ${p.suave}`}
-            >
-              {temaClaro ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="22"
-                  height="22"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  width="22"
-                  height="22"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" />
-                </svg>
-              )}
-            </button>
-          </div>
+      <main
+        className={`relative mx-auto flex min-h-screen w-full max-w-[390px] items-center justify-center px-5 py-10 ${
+          claro ? 'bg-[#F6F7F2]' : 'bg-[#0F1A15]'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setTema(claro ? 'dark' : 'light')}
+          aria-label="Alternar tema"
+          className={`absolute right-5 top-4 grid h-[42px] w-[42px] place-items-center rounded-full ${
+            claro
+              ? 'bg-[#E2EDDC] text-[#14402F]'
+              : 'bg-[#24402F] text-[#E6F0EA]'
+          }`}
+        >
+          <Icone nome={claro ? 'moon' : 'sun'} />
+        </button>
 
+        <section className="w-full max-w-[350px] pt-8">
+        <div
+          className={`rounded-[30px] px-6 py-[30px] text-center shadow-[0_10px_30px_rgba(20,64,47,.12)] ${
+            claro ? 'bg-white' : 'bg-[#1A2A23]'
+          }`}
+        >
           <div
-            className={`mx-auto mb-5 flex h-[62px] w-[62px] items-center justify-center rounded-full ${p.suave}`}
+            className={`mx-auto mb-[18px] grid h-[62px] w-[62px] place-items-center rounded-full ${
+              claro
+                ? 'bg-[#E2EDDC] text-[#14402F]'
+                : 'bg-[#24402F] text-[#E6F0EA]'
+            }`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -198,19 +172,32 @@ function Login() {
             </svg>
           </div>
 
-          <h1 className={`text-3xl font-bold text-center ${p.titulo}`}>
+          <h1
+            className={`text-[26px] font-bold leading-tight ${
+              claro ? 'text-[#17382B]' : 'text-[#E6F0EA]'
+            }`}
+          >
             Bem-vindo de volta
           </h1>
-
-          <p className={`text-center mt-2 mb-8 ${p.texto}`}>
+          <p
+            className={`mb-0 mt-1.5 text-sm ${
+              claro ? 'text-[#5E6F66]' : 'text-[#93A89C]'
+            }`}
+          >
             Acesse sua conta para continuar
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4" noValidate>
+          <form
+            onSubmit={handleLogin}
+            className="mt-[26px] space-y-4 text-left"
+            noValidate
+          >
             <div>
               <label
                 htmlFor="matricula"
-                className={`block mb-2 text-sm font-semibold ${p.titulo}`}
+                className={`mb-2 block text-sm font-semibold ${
+                  claro ? 'text-[#17382B]' : 'text-[#E6F0EA]'
+                }`}
               >
                 Matrícula
               </label>
@@ -220,24 +207,31 @@ function Login() {
                 inputMode="numeric"
                 autoComplete="off"
                 value={matricula}
-                onChange={(e) => {
-                  setMatricula(e.target.value);
+                onChange={(evento) => {
+                  setMatricula(evento.target.value);
                   if (erro) setErro('');
+                  if (mensagemRecuperacao) setMensagemRecuperacao('');
                 }}
                 placeholder="Ex: 202410001"
                 disabled={carregando}
                 aria-invalid={Boolean(erro)}
                 aria-describedby={erro ? 'erro-login' : undefined}
-                className={`w-full rounded-[14px] border-[1.5px] p-4 text-base outline-none focus:border-[#6F9468] focus:ring-4 focus:ring-[#6F9468]/30 disabled:opacity-60 ${p.campo}`}
+                className={`w-full rounded-[14px] border-[1.5px] p-4 text-base outline-none focus:border-[#6F9468] focus:ring-4 focus:ring-[#6F9468]/30 disabled:opacity-60 ${
+                  claro
+                    ? 'border-[#E3E6DE] bg-[#F6F7F2] text-[#17382B] placeholder:text-[#8A978F]'
+                    : 'border-[#2A3B33] bg-[#0F1A15] text-[#E6F0EA] placeholder:text-[#7F948A]'
+                }`}
               />
               {erro && (
-                <div
+                <p
                   id="erro-login"
                   role="alert"
-                  className={`mt-2 text-sm ${p.erro}`}
+                  className={`mt-2 text-sm ${
+                    claro ? 'text-[#B3382C]' : 'text-[#F08A7E]'
+                  }`}
                 >
                   {erro}
-                </div>
+                </p>
               )}
             </div>
 
@@ -250,7 +244,36 @@ function Login() {
             </button>
           </form>
 
-          <div className={`mt-5 border-t pt-4 text-center ${p.divisor}`}>
+          <button
+            type="button"
+            onClick={() => {
+              setErro('');
+              setMensagemRecuperacao(
+                'Procure a secretaria acadêmica para recuperar sua matrícula.'
+              );
+            }}
+            className={`mt-5 text-sm underline ${
+              claro ? 'text-[#14402F]' : 'text-[#7FB083]'
+            }`}
+          >
+            Esqueceu a matrícula?
+          </button>
+          {mensagemRecuperacao && (
+            <p
+              role="status"
+              className={`mt-2 text-sm ${
+                claro ? 'text-[#5E6F66]' : 'text-[#93A89C]'
+              }`}
+            >
+              {mensagemRecuperacao}
+            </p>
+          )}
+
+          <div
+            className={`mt-5 border-t pt-4 text-center ${
+              claro ? 'border-[#E3E6DE]' : 'border-[#2A3B33]'
+            }`}
+          >
             <button
               type="button"
               onClick={() => {
@@ -258,15 +281,22 @@ function Login() {
                 setErro('');
               }}
               disabled={carregando}
-              className={`text-sm underline ${p.link}`}
+              className={`text-sm underline ${
+                claro ? 'text-[#14402F]' : 'text-[#7FB083]'
+              }`}
             >
               Preencher com a matrícula de teste
             </button>
           </div>
         </div>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
   );
+}
+
+function lerRota() {
+  return window.location.hash.replace('#', '') || 'login';
 }
 
 export default function App() {
@@ -274,46 +304,30 @@ export default function App() {
 
   useEffect(() => {
     const atualizarRota = () => setRota(lerRota());
-
     window.addEventListener('hashchange', atualizarRota);
+    aplicarTema(lerTema());
 
     return () => window.removeEventListener('hashchange', atualizarRota);
   }, []);
 
-  /* Aplica o tema salvo (classe "dark" no <html>) assim que o app abre. */
-  useEffect(() => {
-    aplicarTema(lerTema());
-  }, []);
-
-  /* Sem aluno salvo, qualquer rota interna volta para o login. */
-  if (rota !== 'login' && !temAlunoSalvo()) {
-    return <Login />;
-  }
+  if (rota !== 'login' && !lerAluno()) return <Login />;
 
   switch (rota) {
     case 'inicio':
       return <Inicio />;
-
     case 'aula':
       return <Aulas />;
-
-    case 'boletim':
-      return <Boletim />;
-
     case 'disciplinas':
       return <Disciplinas />;
-
+    case 'boletim':
+      return <Boletim />;
     case 'avisos':
       return <Avisos />;
-
     case 'perfil':
       return <Perfil />;
-
     case 'login':
       return <Login />;
-
     default:
-      /* Rota desconhecida: volta para o início, em vez de mostrar o login. */
-      return <Aulas />;
+      return <Inicio />;
   }
 }

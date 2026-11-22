@@ -196,6 +196,7 @@ const ICONES = {
   ),
   home: <path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" />,
   book: <path d="M12 6c-2-1.5-5-2-9-2v14c4 0 7 .5 9 2 2-1.5 5-2 9-2V4c-4 0-7 .5-9 2zM12 6v14" />,
+  chart: <path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" />,
   bell: <path d="M6 9a6 6 0 0112 0c0 6 2 7 2 8H4c0-1 2-2 2-8zM10 20a2 2 0 004 0" />,
 };
 type NomeIcone = keyof typeof ICONES;
@@ -263,7 +264,7 @@ const ABAS: { rota: string; rotulo: string; icone: NomeIcone }[] = [
   { rota: 'inicio', rotulo: 'Início', icone: 'home' },
   { rota: 'aula', rotulo: 'Aulas', icone: 'cal' },
   { rota: 'disciplinas', rotulo: 'Disciplinas', icone: 'book' },
-  { rota: 'boletim', rotulo: 'Boletim', icone: 'book' },
+  { rota: 'boletim', rotulo: 'Boletim', icone: 'chart' },
   { rota: 'avisos', rotulo: 'Avisos', icone: 'bell' },
 ];
 

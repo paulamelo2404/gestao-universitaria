@@ -82,7 +82,7 @@ function iniciais(nome: string): string {
 function Icone({
   tipo,
 }: {
-  tipo: 'moon' | 'sun' | 'logout' | 'home' | 'calendar' | 'book' | 'bell';
+  tipo: 'moon' | 'sun' | 'logout' | 'home' | 'calendar' | 'book' | 'chart' | 'bell';
 }) {
   const paths = {
     moon: <path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" />,
@@ -103,6 +103,7 @@ function Icone({
     book: (
       <path d="M12 6c-2-1.5-5-2-9-2v14c4 0 7 .5 9 2 2-1.5 5-2 9-2V4c-4 0-7 .5-9 2zM12 6v14" />
     ),
+    chart: <path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" />,
     bell: (
       <path d="M6 9a6 6 0 0112 0c0 6 2 7 2 8H4c0-1 2-2 2-8zM10 20a2 2 0 004 0" />
     ),
@@ -281,8 +282,16 @@ export default function Aulas() {
   const classeAvatar = `w-[42px] h-[42px] rounded-full ${cor.suave} flex items-center justify-center font-bold text-sm shrink-0 ${cor.texto}`;
 
   return (
-    <main className={`min-h-screen ${cor.fundo} transition-colors duration-200`}>
-      <div className="mx-auto w-full max-w-[390px] min-h-screen relative">
+    <div
+      className={`min-h-screen ${
+        claro
+          ? 'bg-[#E3E6DE] text-[#17382B]'
+          : 'bg-[#0F1A15] text-[#E6F0EA]'
+      }`}
+    >
+      <main
+        className={`relative mx-auto min-h-screen w-full max-w-[390px] transition-colors duration-200 ${cor.fundo}`}
+      >
         <div className="px-5 pt-6 pb-32">
           {/* Cabeçalho */}
           <header
@@ -488,7 +497,7 @@ export default function Aulas() {
             { rota: 'inicio', nome: 'Início', icone: 'home' as const },
             { rota: 'aula', nome: 'Aulas', icone: 'calendar' as const },
             { rota: 'disciplinas', nome: 'Disciplinas', icone: 'book' as const },
-            { rota: 'boletim', nome: 'Boletim', icone: 'book' as const },
+            { rota: 'boletim', nome: 'Boletim', icone: 'chart' as const },
             { rota: 'avisos', nome: 'Avisos', icone: 'bell' as const },
           ].map((item) => {
             const ativo = item.rota === ROTA_ATUAL;
@@ -525,7 +534,7 @@ export default function Aulas() {
             );
           })}
         </nav>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
