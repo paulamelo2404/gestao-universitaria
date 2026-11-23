@@ -52,7 +52,7 @@ function validarAluno(dados: unknown): dados is AlunoLogin {
   );
 }
 
-function Login() {
+function Login({ onLogin }: { onLogin: () => void }) {
   const [matricula, setMatricula] = useState('');
   const [erro, setErro] = useState('');
   const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
@@ -106,6 +106,7 @@ function Login() {
 
       localStorage.setItem('aluno', JSON.stringify(dados));
       window.location.hash = '#inicio';
+      onLogin();
     } catch (error) {
       setErro(
         error instanceof TypeError
@@ -126,7 +127,7 @@ function Login() {
       }`}
     >
       <main
-        className={`relative mx-auto flex min-h-screen w-full max-w-[390px] items-center justify-center px-5 py-10 ${
+        className={`relative mx-auto flex min-h-screen w-full max-w-97.5 items-center justify-center px-5 py-10 ${
           claro ? 'bg-[#F6F7F2]' : 'bg-[#0F1A15]'
         }`}
       >
@@ -134,7 +135,7 @@ function Login() {
           type="button"
           onClick={() => setTema(claro ? 'dark' : 'light')}
           aria-label="Alternar tema"
-          className={`absolute right-5 top-4 grid h-[42px] w-[42px] place-items-center rounded-full ${
+          className={`absolute right-5 top-4 grid size-10.5 place-items-center rounded-full ${
             claro
               ? 'bg-[#E2EDDC] text-[#14402F]'
               : 'bg-[#24402F] text-[#E6F0EA]'
@@ -143,14 +144,14 @@ function Login() {
           <Icone nome={claro ? 'moon' : 'sun'} />
         </button>
 
-        <section className="w-full max-w-[350px] pt-8">
+        <section className="w-full max-w-87.5 pt-8">
         <div
-          className={`rounded-[30px] px-6 py-[30px] text-center shadow-[0_10px_30px_rgba(20,64,47,.12)] ${
+          className={`rounded-[30px] px-6 py-7.5 text-center shadow-[0_10px_30px_rgba(20,64,47,.12)] ${
             claro ? 'bg-white' : 'bg-[#1A2A23]'
           }`}
         >
           <div
-            className={`mx-auto mb-[18px] grid h-[62px] w-[62px] place-items-center rounded-full ${
+            className={`mx-auto mb-4.5 grid size-15.5 place-items-center rounded-full ${
               claro
                 ? 'bg-[#E2EDDC] text-[#14402F]'
                 : 'bg-[#24402F] text-[#E6F0EA]'
@@ -189,7 +190,7 @@ function Login() {
 
           <form
             onSubmit={handleLogin}
-            className="mt-[26px] space-y-4 text-left"
+            className="mt-6.5 space-y-4 text-left"
             noValidate
           >
             <div>
@@ -301,16 +302,24 @@ function lerRota() {
 
 export default function App() {
   const [rota, setRota] = useState(lerRota);
+  const [aluno, setAluno] = useState(lerAluno);
+  const concluirLogin = () => {
+    setAluno(lerAluno());
+    setRota('inicio');
+  };
 
   useEffect(() => {
-    const atualizarRota = () => setRota(lerRota());
+    const atualizarRota = () => {
+      setRota(lerRota());
+      setAluno(lerAluno());
+    };
     window.addEventListener('hashchange', atualizarRota);
     aplicarTema(lerTema());
 
     return () => window.removeEventListener('hashchange', atualizarRota);
   }, []);
 
-  if (rota !== 'login' && !lerAluno()) return <Login />;
+  if (rota !== 'login' && !aluno) return <Login onLogin={concluirLogin} />;
 
   switch (rota) {
     case 'inicio':
@@ -326,7 +335,7 @@ export default function App() {
     case 'perfil':
       return <Perfil />;
     case 'login':
-      return <Login />;
+      return <Login onLogin={concluirLogin} />;
     default:
       return <Inicio />;
   }
