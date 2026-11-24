@@ -33,11 +33,8 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 * **API:** Rotas implementadas para buscar aluno por matrícula, próxima aula, notas e avisos.
 * **Implementar a navegação inferior (Bottom Nav):** caso faça parte dos requisitos do projeto.
 * **Validar o funcionamento integrado.**
+* **Gravar o vídeo de 1 minuto de demonstração.**
 ---
-
-## 🚧 O que falta fazer (Próximos Passos)
-- [ ] Escrever o documento final da 2ª entrega.
-- [ ] Gravar o vídeo de 1 minuto de demonstração.
 
 
 ## 💻 Como rodar o projeto na sua máquina
