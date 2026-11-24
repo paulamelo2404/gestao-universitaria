@@ -32,8 +32,8 @@ O objetivo desta etapa é validar a **Jornada do Aluno** (Login, Notas, Avisos e
 * **Banco de Dados:** Modelagem das entidades Aluno, Disciplina, Aula, Nota e Aviso.
 * **API:** Rotas implementadas para buscar aluno por matrícula, próxima aula, notas e avisos.
 * **Implementar a navegação inferior (Bottom Nav):** caso faça parte dos requisitos do projeto.
-* **Validar o funcionamento integrado.**
-* **Gravar o vídeo de 1 minuto de demonstração.**
+* **Validar o funcionamento integrado.**  testes realizados entre frontend, backend e banco de dados, confirmando o funcionamento das principais funcionalidades da aplicação.
+* **Vídeo de demonstração anexado (Demonstracao_Projeto_2.mp4):** gravação de 58 segundos apresentando as principais funcionalidades da aplicação.
 ---
 
 
